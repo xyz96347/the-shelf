@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Shelf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F8F6F0; --surface:#FFFFFF; --sunk:#EEEAE0;
+    --ink:#22261F; --muted:#636A60;
+    --line:rgba(34,38,31,.14); --line-strong:rgba(34,38,31,.32);
+    --plank:#D6CCB5; --focus:#2F6F73;
+    --c0:#9A4141; --c1:#4F7F63; --c2:#3F5F8A; --c3:#B07D2B; --c4:#75507A; --c5:#2F7479;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#171916; --surface:#21241F; --sunk:#2A2E27;
+      --ink:#ECE8DD; --muted:#A3A89C;
+      --line:rgba(236,232,221,.16); --line-strong:rgba(236,232,221,.36);
+      --plank:#3B3E33; --focus:#6FC0C4;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#171916; --surface:#21241F; --sunk:#2A2E27;
+    --ink:#ECE8DD; --muted:#A3A89C;
+    --line:rgba(236,232,221,.16); --line-strong:rgba(236,232,221,.36);
+    --plank:#3B3E33; --focus:#6FC0C4;
+  }
+  *{box-sizing:border-box}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--paper)}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
+    font-size:16px;line-height:1.5;min-height:100vh;
+    -webkit-tap-highlight-color:transparent;
+  }
+  button,input,select,textarea{font:inherit;color:inherit}
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .wrap{max-width:720px;margin:0 auto;padding:26px 18px 90px}
+
+  /* header */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+  .title{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:30px;line-height:1.1;margin:0 0 6px}
+  .sub{margin:0;color:var(--muted);font-size:15px;max-width:34ch}
+  .week{display:flex;gap:7px;flex-shrink:0}
+  .day{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+  .dot{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line-strong)}
+  .dot.on{background:var(--ink);border-color:var(--ink)}
+  .dot.today{box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--muted)}
+  .week-note{font-size:12px;color:var(--muted);text-align:right;margin-top:6px}
+
+  /* start card */
+  .nudge{
+    background:var(--surface);border:1px solid var(--line);border-left:7px solid var(--c);
+    border-radius:14px;padding:20px 20px 18px;margin:24px 0 36px;
+  }
+  .controls{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:20px}
+  .ctl{display:flex;align-items:center;gap:10px}
+  .ctl-name{font-size:14px;color:var(--muted)}
+  .seg{display:inline-flex;background:var(--sunk);border-radius:10px;padding:3px}
+  .seg button{border:0;background:transparent;font-size:14px;padding:6px 13px;border-radius:8px;cursor:pointer;min-height:36px}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:700}
+  .piece{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .piece-name{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:26px;line-height:1.2;margin:0}
+  .piece-cat{font-size:14px;color:var(--muted)}
+  .why{color:var(--muted);font-size:14px;margin:4px 0 14px}
+  .step-note{font-size:13px;color:var(--muted);margin:0 0 2px}
+  .step{font-size:19px;line-height:1.5;margin:0 0 20px;max-width:52ch}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .btn{border:0;background:var(--ink);color:var(--paper);font-weight:700;padding:13px 22px;border-radius:12px;cursor:pointer;min-height:48px}
+  .btn.quiet{background:transparent;color:var(--ink);border:1px solid var(--line-strong);font-weight:400}
+  .btn:disabled{opacity:.45;cursor:default}
+  .linkish{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:14px;cursor:pointer;padding:10px 4px}
+  .empty-note{margin:0;font-size:17px;max-width:46ch}
+
+  /* shelves */
+  .shelves-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  h2.h{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:21px;margin:0}
+  .overall{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+  .bar{width:110px;height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--ink);transition:width .6s ease}
+  .hero-msg{margin:0 0 22px;color:var(--muted);font-size:15px}
+  .shelf{margin-bottom:28px}
+  .shelf-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+  .shelf-name{background:none;border:0;padding:2px 0;cursor:pointer;display:flex;align-items:center;gap:9px;font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:18px}
+  .swatch{width:12px;height:12px;border-radius:3px;background:var(--c)}
+  .shelf-meta{font-size:13px;color:var(--muted)}
+  .row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;padding:16px 12px 0;min-height:150px;border-bottom:9px solid var(--plank);border-radius:4px 4px 0 0}
+  .book{
+    position:relative;width:var(--w);height:var(--h);padding:0;cursor:pointer;overflow:hidden;
+    border:1.5px solid color-mix(in srgb,var(--c) 60%,var(--paper));
+    border-radius:4px 4px 2px 2px;
+    background:color-mix(in srgb,var(--c) 15%,var(--paper));
+    transition:transform .15s ease;
+  }
+  .book:hover{transform:translateY(-4px)}
+  .book-fill{position:absolute;left:0;right:0;bottom:0;background:var(--c);transition:height .7s cubic-bezier(.22,.9,.3,1)}
+  .book-label{
+    position:absolute;top:7px;left:50%;transform:translateX(-50%);
+    width:calc(100% - 10px);height:78px;overflow:hidden;
+    background:var(--surface);color:var(--ink);border-radius:2px;
+    writing-mode:vertical-rl;font-size:11px;line-height:1.15;padding:5px 1px;text-align:start;
+    box-shadow:0 0 0 1px var(--line);
+  }
+  .book-done{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:var(--surface);color:var(--ink);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .add-book{
+    width:44px;height:118px;border-radius:4px;border:1.5px dashed var(--line-strong);background:transparent;
+    color:var(--muted);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .add-book:hover{color:var(--ink);border-color:var(--ink)}
+  .add-shelf{background:none;border:0;color:var(--muted);font-size:14px;padding:8px 2px;cursor:pointer}
+  .add-shelf:hover{color:var(--ink)}
+
+  /* parking lot */
+  .park{margin-top:40px}
+  .hint{margin:4px 0 14px;color:var(--muted);font-size:14px;max-width:50ch}
+  .park-add{display:flex;gap:8px}
+  .park-list{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .park-item{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .park-item span{flex:1;min-width:0;overflow-wrap:anywhere}
+  .mini{background:none;border:1px solid var(--line-strong);border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer}
+  .mini:hover{border-color:var(--ink)}
+  .mini.x{border-color:transparent;color:var(--muted);font-size:18px;line-height:1;padding:3px 9px}
+
+  details.backup{margin-top:46px;border-top:1px solid var(--line);padding-top:16px}
+  details.backup summary{cursor:pointer;color:var(--muted);font-size:14px}
+  details.backup textarea{width:100%;height:110px;margin-top:12px}
+  .save-note{font-size:13px;color:var(--muted);margin-top:10px}
+
+  /* inputs */
+  .input{width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:12px 13px;min-width:0}
+  textarea.input{font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  /* sheets */
+  .overlay{position:fixed;inset:0;background:rgba(10,12,9,.55);display:flex;align-items:flex-end;justify-content:center;z-index:100;opacity:0;transition:opacity .2s ease}
+  .overlay.open{opacity:1}
+  .sheet{
+    background:var(--surface);border-radius:18px 18px 0 0;width:100%;max-width:520px;
+    padding:22px 20px calc(24px + env(safe-area-inset-bottom,0px));
+    max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .22s ease;
+  }
+  .overlay.open .sheet{transform:none}
+  .sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px}
+  .sheet-title{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:22px;line-height:1.2;margin:0}
+  .sheet-sub{margin:0 0 4px;color:var(--muted);font-size:14px}
+  .x-btn{background:none;border:0;font-size:24px;line-height:1;color:var(--muted);cursor:pointer;padding:2px 8px}
+  .label{font-size:14px;color:var(--muted);margin:18px 0 8px}
+  .effort-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .effort{background:var(--sunk);border:1.5px solid transparent;border-radius:12px;padding:12px;text-align:left;cursor:pointer}
+  .effort[aria-pressed="true"]{border-color:var(--ink);background:var(--surface);box-shadow:inset 0 0 0 1px var(--ink)}
+  .effort b{display:block;font-size:15px}
+  .effort small{color:var(--muted);font-size:13px}
+  .pick{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;margin-bottom:8px}
+  .pick:hover{border-color:var(--ink)}
+  .checks{display:flex;flex-direction:column;gap:8px}
+  .check{display:flex;align-items:center;gap:10px;background:var(--sunk);border-radius:10px;padding:10px 12px}
+  .check input{width:19px;height:19px;accent-color:var(--ink);flex-shrink:0}
+  .check span.done{text-decoration:line-through;color:var(--muted)}
+  .check span.t{flex:1;min-width:0;overflow-wrap:anywhere}
+  .row-end{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;align-items:center}
+  .row-end .btn{flex:1}
+  .slider-row{display:flex;align-items:center;gap:12px}
+  input[type=range]{flex:1;accent-color:var(--ink)}
+  .val{width:44px;text-align:right;color:var(--muted);font-size:14px}
+  .sub-bar{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden}
+  .sub-bar i{display:block;height:100%;background:var(--ink)}
+  .add-row{display:flex;gap:8px;margin-top:10px}
+
+  /* focus timer */
+  .focus{
+    position:fixed;inset:0;z-index:150;background:var(--paper);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    padding:calc(24px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px));
+    overflow-y:auto;border-top:8px solid var(--c);
+  }
+  .focus-piece{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:22px;margin:0 0 8px}
+  .focus-step{max-width:34ch;font-size:19px;margin:0 0 26px}
+  .clock{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:clamp(76px,22vw,136px);line-height:1;font-variant-numeric:tabular-nums}
+  .focus-bar{width:min(420px,80vw);height:6px;border-radius:99px;background:var(--sunk);overflow:hidden;margin:20px 0 28px}
+  .focus-bar i{display:block;height:100%;background:var(--c)}
+  .focus .actions{justify-content:center}
+  .focus-park{margin-top:34px;width:min(420px,88vw)}
+  .focus-park label{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
+
+  .toast{
+    position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translate(-50%,-16px);
+    background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:12px;font-size:15px;
+    opacity:0;transition:opacity .3s ease,transform .3s ease;z-index:300;max-width:90%;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .empty{padding:70px 0;text-align:center}
+  .empty p{max-width:40ch;margin:12px auto 24px;color:var(--muted)}
+
+  @media (max-width:520px){
+    .top{flex-direction:column}
+    .week-note{text-align:left}
+    .title{font-size:27px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<noscript>This app needs JavaScript to run.</noscript>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- constants ---------- */
+const KEY = 'phd-shelf-v2';
+const ORIG_TITLE = document.title;
+const PRESETS = ['Chapters','Papers','Analysis','Reading & thinking'];
+const EFFORTS = [
+  {key:'showed', title:'Showed up',    desc:'Opened it, sat with it',          bump:2},
+  {key:'small',  title:'Small step',   desc:'A paragraph, a script, an outline', bump:5},
+  {key:'solid',  title:'Solid session',desc:'A real chunk of focused work',    bump:10},
+  {key:'deep',   title:'Deep work',    desc:'Long stretch, real progress',     bump:16}
+];
+const MESSAGES = [
+  "Logged. Starting is the hard part, and you did it.",
+  "Counted. No judging, just counting.",
+  "That's showing up. That counts as the job.",
+  "Progress, quietly banked.",
+  "One more than zero.",
+  "Done for now is still done."
+];
+// Each ladder goes from a big step (0) to an absurdly small one (4).
+const LADDERS = {
+  writing:[
+    "Draft one full section without stopping to edit. Bad sentences are allowed.",
+    "Write three bullet points: what this part has to say. Then expand the first one.",
+    "Write one ugly paragraph. Don't reread it.",
+    "Open the document and write a heading and one sentence you'd never show anyone.",
+    "Open the file. That's the whole step."
+  ],
+  reading:[
+    "Read one paper end to end. Write three lines: what they did, what they found, why it matters to you.",
+    "Read the abstract, the figures and the conclusion of one paper. Jot one takeaway.",
+    "Read only the abstract and write one sentence about it in your own words.",
+    "Open the paper and read the first paragraph.",
+    "Open the PDF. That's the whole step."
+  ],
+  analysis:[
+    "Run one analysis from start to finish and write down what the output says.",
+    "Write the one question this analysis answers, then set up the first block of the script.",
+    "Open the script, fix or comment one thing, and re-run it.",
+    "Open the script or data and read the last thing you did.",
+    "Open the file. That's the whole step."
+  ],
+  generic:[
+    "Work on it with your phone away until the timer ends.",
+    "Write down the three smallest parts of this, then start the first one.",
+    "Pick the easiest small part and spend the block on that.",
+    "Open it and write down what you would do next. Nothing else.",
+    "Open it. That's the whole step."
+  ]
+};
+
+/* ---------- helpers ---------- */
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const pad = n => String(n).padStart(2,'0');
+const dstr = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+const today = () => dstr(new Date());
+const clamp = (n,a,b) => Math.max(a, Math.min(b, n));
+function daysAgo(s){
+  const a = new Date(s + 'T00:00:00'), b = new Date(today() + 'T00:00:00');
+  return Math.round((b - a) / 864e5);
+}
+function agoText(n){ return n <= 0 ? 'today' : n === 1 ? 'yesterday' : n + ' days ago'; }
+const colorVar = ci => 'var(--c' + (ci % 6) + ')';
+
+/* ---------- state ---------- */
+let state, storageOK = true;
+let nudge = null;     // {itemId, shrink, seen:[]}
+let session = null;   // active focus session
+let timer = null;
+
+function normalize(s){
+  s = (s && typeof s === 'object') ? s : {};
+  const out = {
+    categories: (Array.isArray(s.categories) ? s.categories : []).map(c => ({
+      id: c.id || uid(),
+      name: c.name || 'Untitled',
+      items: (Array.isArray(c.items) ? c.items : []).map(i => ({
+        id: i.id || uid(),
+        title: i.title || 'Untitled piece',
+        progress: clamp(parseInt(i.progress,10) || 0, 0, 100),
+        dread: [1,2,3].includes(i.dread) ? i.dread : 2,
+        nextStep: i.nextStep || '',
+        subsections: Array.isArray(i.subsections) ? i.subsections.map(x => ({id:x.id||uid(), title:x.title||'', done:!!x.done})) : [],
+        sessions: Array.isArray(i.sessions) ? i.sessions : []
+      }))
+    })),
+    days: (s.days && typeof s.days === 'object') ? s.days : {},
+    ideas: Array.isArray(s.ideas) ? s.ideas : [],
+    prefs: Object.assign({energy:'mid', time:25}, s.prefs || {})
+  };
+  out.categories.forEach(c => c.items.forEach(i => i.sessions.forEach(x => {
+    if (x && x.date && !out.days[x.date]) out.days[x.date] = {count:1};
+  })));
+  if (s.streak && s.streak.lastDate && !out.days[s.streak.lastDate]) out.days[s.streak.lastDate] = {count:1};
+  return out;
+}
+function load(){
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch(e){ storageOK = false; }
+  let parsed = null;
+  try { parsed = raw ? JSON.parse(raw) : null; } catch(e){ parsed = null; }
+  state = normalize(parsed);
+}
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch(e){
+    if (storageOK){
+      storageOK = false;
+      toast("This browser can't save your shelf. Use the backup at the bottom to keep a copy.");
+    }
+  }
+}
+
+/* ---------- queries ---------- */
+function allItems(){
+  const out = [];
+  state.categories.forEach((cat, ci) => cat.items.forEach(item => out.push({cat, ci, item})));
+  return out;
+}
+function findItem(id){ return allItems().find(x => x.item.id === id) || null; }
+function lastTouched(item){
+  const d = (item.sessions || []).map(s => s.date).filter(Boolean).sort();
+  return d.length ? d[d.length - 1] : null;
+}
+function overallPct(){
+  const it = allItems();
+  return it.length ? Math.round(it.reduce((s,x) => s + x.item.progress, 0) / it.length) : 0;
+}
+function dims(id){
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return {w: 42 + (h % 12), h: 112 + ((h >> 4) % 16)};
+}
+function kindOf(cat, item){
+  const t = (cat.name + ' ' + item.title).toLowerCase();
+  if (/analy|code|script|stata|python|\br\b|data|model|regress|simulat/.test(t)) return 'analysis';
+  if (/read|literature|lit review|notes|paper review|reference/.test(t)) return 'reading';
+  if (/chapter|draft|write|writing|section|thesis|intro|discussion|abstract|paper|proposal|methods/.test(t)) return 'writing';
+  return 'generic';
+}
+
+/* ---------- picking a step ---------- */
+function pickPiece(seen){
+  const pool = allItems().filter(x => x.item.progress < 100);
+  if (!pool.length) return null;
+  const e = state.prefs.energy;
+  const target = {low:1, mid:2, high:3}[e];
+  let best = null;
+  pool.forEach(x => {
+    const d = x.item.dread || 2;
+    const last = lastTouched(x.item);
+    const ago = last == null ? 10 : daysAgo(last);
+    let s = 3 - Math.abs(d - target) * 1.5;
+    s += Math.min(ago, 14) / 14 * 2;
+    if (ago <= 3 && x.item.progress > 0 && x.item.progress < 90) s += e === 'low' ? 1 : 0.5;
+    if (seen.includes(x.item.id)) s -= 100;
+    s += Math.random() * 0.6;
+    if (!best || s > best.s) best = {item:x.item, s};
+  });
+  return best ? best.item.id : null;
+}
+function makeNudge(keepSeen){
+  const seen = keepSeen ? nudge.seen : [];
+  let id = pickPiece(seen);
+  if (id && seen.includes(id)) { seen.length = 0; id = pickPiece(seen); }
+  nudge = id ? {itemId:id, shrink:0, seen:seen.concat(id)} : null;
+}
+function stepFor(x){
+  const it = x.item, e = state.prefs.energy, t = state.prefs.time;
+  let base = {low:2, mid:1, high:0}[e];
+  if (t === 10) base += 1;
+  base = Math.min(base, 3);
+  const rung = Math.min(4, base + nudge.shrink);
+  if (it.nextStep && nudge.shrink === 0){
+    return {text: it.nextStep, note: 'Your note from last time', subId: null, rung: -1, canShrink: true};
+  }
+  const sub = it.subsections.find(s => !s.done);
+  let text = LADDERS[kindOf(x.cat, it)][rung];
+  if (sub) text = 'Part: ' + sub.title + '. ' + text;
+  return {text, note: '', subId: sub ? sub.id : null, rung, canShrink: rung < 4};
+}
+function whyText(x){
+  const last = lastTouched(x.item);
+  const ago = last == null ? null : daysAgo(last);
+  const e = state.prefs.energy;
+  if (x.item.nextStep) return 'You left yourself a note here.';
+  if (ago === null) return 'Not started yet. The first touch is the hardest.';
+  if (ago >= 7) return 'Untouched for ' + ago + ' days. It will not get easier by waiting.';
+  if (ago <= 3 && x.item.progress > 0) return 'You were here ' + agoText(ago) + '. Keep the thread.';
+  if (e === 'low') return 'A lighter one for a low-energy day.';
+  if (e === 'high') return 'Good one to take on while your energy is up.';
+  return 'A steady, middle-weight piece.';
+}
+
+/* ---------- rendering ---------- */
+const app = document.getElementById('app');
+
+function weekHtml(){
+  const out = [];
+  let n = 0;
+  for (let i = 6; i >= 0; i--){
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = dstr(d), on = !!(state.days[k] && state.days[k].count > 0);
+    if (on) n++;
+    out.push('<div class="day"><span class="dot' + (on ? ' on' : '') + (i === 0 ? ' today' : '') + '"></span><span aria-hidden="true">' +
+      esc(d.toLocaleDateString(undefined,{weekday:'narrow'})) + '</span></div>');
+  }
+  return '<div><div class="week" role="img" aria-label="Showed up on ' + n + ' of the last 7 days">' + out.join('') +
+    '</div><div class="week-note">' + (n ? 'Showed up ' + n + ' of the last 7 days' : 'A blank week is just a fresh start') + '</div></div>';
+}
+
+function seg(name, key, opts){
+  return '<div class="ctl"><span class="ctl-name" id="lbl-' + key + '">' + name + '</span>' +
+    '<div class="seg" role="group" aria-labelledby="lbl-' + key + '">' +
+    opts.map(o => '<button data-act="pref" data-key="' + key + '" data-val="' + o[0] + '" aria-pressed="' + (String(state.prefs[key]) === String(o[0])) + '">' + o[1] + '</button>').join('') +
+    '</div></div>';
+}
+
+function nudgeHtml(){
+  if (!nudge){
+    const none = allItems().length === 0;
+    return '<section class="nudge" style="--c:var(--c0)"><p class="empty-note">' +
+      (none ? 'Add your first piece with the + on any shelf. Then this card will pick one small step for you.'
+            : 'Every piece on the shelf is done. Add something new, or take the win.') + '</p></section>';
+  }
+  const x = findItem(nudge.itemId), st = stepFor(x);
+  return '<section class="nudge" style="--c:' + colorVar(x.ci) + '" aria-label="Your next step">' +
+    '<div class="controls">' +
+      seg('Energy','energy',[['low','Low'],['mid','Okay'],['high','High']]) +
+      seg('Time','time',[[10,'10 min'],[25,'25 min'],[60,'1 hour']]) +
+    '</div>' +
+    '<div class="piece"><h2 class="piece-name">' + esc(x.item.title) + '</h2><span class="piece-cat">' + esc(x.cat.name) + '</span></div>' +
+    '<p class="why">' + esc(whyText(x)) + '</p>' +
+    (st.note ? '<p class="step-note">' + esc(st.note) + '</p>' : '') +
+    '<p class="step">' + esc(st.text) + '</p>' +
+    '<div class="actions">' +
+      '<button class="btn" data-act="start">Start 5 minutes</button>' +
+      '<button class="btn quiet" data-act="shrink"' + (st.canShrink ? '' : ' disabled') + '>' + (st.canShrink ? 'Make it smaller' : 'Smallest already') + '</button>' +
+      '<button class="linkish" data-act="another">Another piece</button>' +
+    '</div></section>';
+}
+function renderNudge(){
+  const m = $('#nudgeMount');
+  if (m) m.innerHTML = nudgeHtml();
+}
+
+function heroMsg(p){
+  if (!allItems().length) return 'Add a piece whenever you are ready. No rush.';
+  if (p === 0) return 'Nothing inked in yet. One small step is enough to start.';
+  if (p < 25) return 'Early days. The shelf fills one session at a time.';
+  if (p < 50) return 'Steady build. You do not have to feel it to be making it.';
+  if (p < 75) return 'Past the middle. Momentum is doing some of the work now.';
+  if (p < 100) return 'Closing in. Whatever pace gets you there is the right pace.';
+  return 'Every piece on the shelf is done.';
+}
+
+function shelfHtml(cat, ci){
+  const avg = cat.items.length ? Math.round(cat.items.reduce((s,i) => s + i.progress, 0) / cat.items.length) : 0;
+  return '<div class="shelf" style="--c:' + colorVar(ci) + '">' +
+    '<div class="shelf-top"><button class="shelf-name" data-act="edit-cat" data-id="' + cat.id + '"><span class="swatch"></span>' + esc(cat.name) + '</button>' +
+    '<span class="shelf-meta">' + (cat.items.length ? cat.items.length + (cat.items.length === 1 ? ' piece, ' : ' pieces, ') + avg + '% average' : 'no pieces yet') + '</span></div>' +
+    '<div class="row">' +
+    cat.items.map(it => {
+      const d = dims(it.id);
+      return '<button class="book" data-act="open-item" data-id="' + it.id + '" style="--w:' + d.w + 'px;--h:' + d.h + 'px" ' +
+        'aria-label="' + esc(it.title) + ', ' + it.progress + ' percent" title="' + esc(it.title) + ' (' + it.progress + '%)">' +
+        '<span class="book-fill" style="height:' + it.progress + '%"></span>' +
+        '<span class="book-label">' + esc(it.title) + '</span>' +
+        (it.progress >= 100 ? '<span class="book-done" aria-hidden="true">&#10003;</span>' : '') +
+        '</button>';
+    }).join('') +
+    '<button class="add-book" data-act="add-item" data-id="' + cat.id + '" aria-label="Add a piece to ' + esc(cat.name) + '">+</button>' +
+    '</div></div>';
+}
+
+function render(){
+  if (!state.categories.length){
+    app.innerHTML = '<div class="wrap"><div class="empty"><h1 class="title">Your shelf is empty</h1>' +
+      '<p>Set up a simple structure of chapters, papers, analysis and reading. Add pieces whenever you think of them. You do not need to plan it all now.</p>' +
+      '<button class="btn" data-act="seed">Set up my shelf</button></div></div>';
+    return;
+  }
+  const cur = nudge && findItem(nudge.itemId);
+  if (!cur || cur.item.progress >= 100) makeNudge(false);
+
+  const pct = overallPct();
+  app.innerHTML =
+    '<div class="wrap">' +
+      '<header class="top"><div><h1 class="title">The Shelf</h1>' +
+      '<p class="sub">Your PhD in small pieces. Pick a step, work for five minutes, and let the books ink in.</p></div>' + weekHtml() + '</header>' +
+      '<div id="nudgeMount">' + nudgeHtml() + '</div>' +
+      '<div class="shelves-head"><h2 class="h">Your shelves</h2>' +
+        '<div class="overall"><span>' + pct + '% overall</span><span class="bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span></div></div>' +
+      '<p class="hero-msg">' + esc(heroMsg(pct)) + '</p>' +
+      state.categories.map(shelfHtml).join('') +
+      '<button class="add-shelf" data-act="add-cat">+ Add a category</button>' +
+      '<section class="park"><h2 class="h">Parking lot</h2>' +
+        '<p class="hint">Stray thoughts and new ideas go here, so they stop interrupting you. Sort them out later.</p>' +
+        '<div class="park-add"><input class="input" id="parkInput" placeholder="A thought to set aside" aria-label="A thought to set aside" maxlength="200">' +
+        '<button class="btn" data-act="park-add">Park it</button></div>' +
+        '<ul class="park-list">' + state.ideas.map(i =>
+          '<li class="park-item"><span>' + esc(i.text) + '</span>' +
+          '<button class="mini" data-act="park-shelf" data-id="' + i.id + '">Put on a shelf</button>' +
+          '<button class="mini x" data-act="park-del" data-id="' + i.id + '" aria-label="Delete this thought">&times;</button></li>').join('') + '</ul></section>' +
+      '<details class="backup"><summary>Backup and restore</summary>' +
+        '<p class="hint" style="margin-top:12px">Your shelf is saved in this browser only. Copy this text somewhere safe. To restore, paste a backup over it and press restore.</p>' +
+        '<textarea class="input" id="backupBox" spellcheck="false" aria-label="Backup text"></textarea>' +
+        '<div class="row-end"><button class="btn quiet" data-act="copy-backup" style="flex:none">Copy backup</button>' +
+        '<button class="btn quiet" data-act="restore" style="flex:none">Restore from text</button></div>' +
+        (storageOK ? '' : '<p class="save-note">This browser is not saving changes. Copy a backup before you leave.</p>') +
+      '</details>' +
+    '</div>';
+  const box = $('#backupBox'); if (box) box.value = JSON.stringify(state);
+}
+
+/* ---------- toast, sheets ---------- */
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'toast'; el.setAttribute('role','status'); el.textContent = msg;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 350); }, 2800);
+}
+function openSheet(html, opts){
+  opts = opts || {};
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true">' + html + '</div>';
+  ov._dismiss = opts.dismiss !== false;
+  ov._prev = document.activeElement;
+  ov.addEventListener('mousedown', e => { if (e.target === ov && ov._dismiss) closeSheet(ov); });
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add('open'));
+  const f = ov.querySelector('input.input, input, button');
+  if (f) setTimeout(() => f.focus({preventScroll:true}), 40);
+  const x = ov.querySelector('[data-close]');
+  if (x) x.onclick = () => closeSheet(ov);
+  return ov;
+}
+function closeSheet(ov){
+  if (!ov || !ov.isConnected) return;
+  ov.classList.remove('open');
+  setTimeout(() => ov.remove(), 200);
+  try { if (ov._prev && ov._prev.isConnected) ov._prev.focus({preventScroll:true}); } catch(e){}
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const all = document.querySelectorAll('.overlay');
+  const top = all[all.length - 1];
+  if (top && top._dismiss) closeSheet(top);
+});
+
+function textSheet(o){
+  const ov = openSheet(
+    '<div class="sheet-head"><h3 class="sheet-title">' + esc(o.title) + '</h3><button class="x-btn" data-close aria-label="Close">&times;</button></div>' +
+    (o.sub ? '<p class="sheet-sub">' + esc(o.sub) + '</p>' : '') +
+    '<div class="label">' + esc(o.label) + '</div>' +
+    '<input class="input" id="tsIn" maxlength="120" placeholder="' + esc(o.placeholder || '') + '" value="' + esc(o.value || '') + '">' +
+    '<div class="row-end"><button class="btn" id="tsGo">' + esc(o.cta) + '</button>' + (o.extra || '') + '</div>');
+  const input = $('#tsIn', ov);
+  const go = () => { const v = input.value.trim(); if (!v) return; closeSheet(ov); o.onSubmit(v); };
+  $('#tsGo', ov).onclick = go;
+  input.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); go(); } };
+  if (o.bindExtra) o.bindExtra(ov);
+  return ov;
+}
+function confirmSheet(o){
+  const ov = openSheet(
+    '<div class="sheet-head"><h3 class="sheet-title">' + esc(o.title) + '</h3><button class="x-btn" data-close aria-label="Close">&times;</button></div>' +
+    '<p class="sheet-sub">' + esc(o.body) + '</p>' +
+    '<div class="row-end"><button class="btn quiet" data-close>Cancel</button><button class="btn" id="cfGo">' + esc(o.cta) + '</button></div>');
+  ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeSheet(ov));
+  $('#cfGo', ov).onclick = () => { closeSheet(ov); o.onYes(); };
+}
+
+/* ---------- focus timer ---------- */
+function chime(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    [523.25, 659.25].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + i * 0.22;
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.15, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t); o.stop(t + 1);
+    });
+  } catch(e){}
+}
+function startFocus(){
+  const x = findItem(nudge.itemId); if (!x) return;
+  const st = stepFor(x);
+  session = {itemId:x.item.id, subId:st.subId, usedNote:st.rung === -1, elapsed:0, text:st.text};
+  runSegment(300);
+}
+function runSegment(sec){
+  closeFocus();
+  const x = findItem(session.itemId);
+  const el = document.createElement('div');
+  el.className = 'focus'; el.id = 'focus';
+  el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label','Focus timer');
+  el.style.setProperty('--c', colorVar(x.ci));
+  el.innerHTML =
+    '<p class="focus-piece">' + esc(x.item.title) + '</p>' +
+    '<p class="focus-step">' + esc(session.text) + '</p>' +
+    '<div class="clock" id="clock" aria-hidden="true">05:00</div>' +
+    '<div class="focus-bar" aria-hidden="true"><i id="fbar" style="width:100%"></i></div>' +
+    '<div class="actions"><button class="btn quiet" id="pauseBtn">Pause</button><button class="btn" id="stopBtn">Stop and count it</button></div>' +
+    '<div class="focus-park"><label for="focusPark">Distracted by a thought? Park it and keep going.</label>' +
+    '<input class="input" id="focusPark" maxlength="200" placeholder="Type it, press Enter"></div>';
+  document.body.appendChild(el);
+  timer = {dur:sec * 1000, end:Date.now() + sec * 1000, left:sec * 1000, paused:false, iv:setInterval(tick, 250)};
+  $('#pauseBtn', el).onclick = togglePause;
+  $('#stopBtn', el).onclick = () => endSegment(false);
+  $('#focusPark', el).onkeydown = e => {
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      const v = e.target.value.trim(); if (!v) return;
+      state.ideas.unshift({id:uid(), text:v, date:today()}); save();
+      e.target.value = ''; toast('Parked. Back to it.');
+    }
+  };
+  tick();
+  $('#pauseBtn', el).focus();
+}
+function tick(){
+  if (!timer || timer.paused) return;
+  timer.left = Math.max(0, timer.end - Date.now());
+  paintClock();
+  if (timer.left <= 0) endSegment(true);
+}
+function paintClock(){
+  const c = $('#clock'); if (!c || !timer) return;
+  const s = Math.ceil(timer.left / 1000);
+  const t = pad(Math.floor(s / 60)) + ':' + pad(s % 60);
+  c.textContent = t;
+  $('#fbar').style.width = (timer.left / timer.dur * 100) + '%';
+  document.title = t + ' · The Shelf';
+}
+function togglePause(){
+  if (!timer) return;
+  const b = $('#pauseBtn');
+  if (!timer.paused){ timer.left = Math.max(0, timer.end - Date.now()); timer.paused = true; b.textContent = 'Resume'; }
+  else { timer.end = Date.now() + timer.left; timer.paused = false; b.textContent = 'Pause'; }
+}
+function closeFocus(){ const f = $('#focus'); if (f) f.remove(); }
+function endSegment(finished){
+  if (!timer) return;
+  if (!timer.paused) timer.left = Math.max(0, timer.end - Date.now());
+  session.elapsed += (timer.dur - timer.left) / 1000;
+  clearInterval(timer.iv); timer = null;
+  closeFocus(); document.title = ORIG_TITLE;
+  if (finished) chime();
+  openDoneSheet({itemId:session.itemId, elapsed:session.elapsed, subId:session.subId, usedNote:session.usedNote, manual:false});
+}
+window.addEventListener('beforeunload', e => { if (timer) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- logging a session ---------- */
+function effortFor(sec){ return sec < 180 ? 'showed' : sec < 600 ? 'small' : sec < 1800 ? 'solid' : 'deep'; }
+
+function openDoneSheet(o){
+  const x = findItem(o.itemId); if (!x) return;
+  const it = x.item, mins = Math.round(o.elapsed / 60);
+  const hasSubs = it.subsections.length > 0;
+  let effort = o.manual ? 'small' : effortFor(o.elapsed);
+  const open = it.subsections.filter(s => !s.done);
+  const keepMin = o.manual ? 0 : Math.max(5, Math.min(25, state.prefs.time - Math.ceil(o.elapsed / 60)));
+  const head = o.manual ? 'Log a session' : (o.elapsed >= 60 ? mins + ' min in. That counts.' : 'You started. That counts.');
+
+  const ov = openSheet(
+    '<div class="sheet-head"><h3 class="sheet-title">' + esc(head) + '</h3></div>' +
+    '<p class="sheet-sub">' + esc(it.title) + '</p>' +
+    (hasSubs ? '' : '<div class="label">How much got done? The closest one is fine.</div><div class="effort-grid">' +
+      EFFORTS.map(e => '<button class="effort" data-eff="' + e.key + '" aria-pressed="' + (e.key === effort) + '"><b>' + e.title + '</b><small>' + e.desc + '</small></button>').join('') + '</div>') +
+    (open.length ? '<div class="label">Finished any parts?</div><div class="checks">' +
+      open.map(s => '<label class="check"><input type="checkbox" data-sub="' + s.id + '"><span class="t">' + esc(s.title) + '</span></label>').join('') + '</div>' : '') +
+    '<div class="label">Leave a first step for next time (optional)</div>' +
+    '<input class="input" id="noteIn" maxlength="140" placeholder="e.g. Rewrite the first paragraph of 2.1">' +
+    '<div class="row-end">' +
+      (o.manual ? '' : '<button class="btn quiet" id="keepBtn">Keep going ' + keepMin + ' min</button>') +
+      '<button class="btn" id="logBtn">Log it</button></div>' +
+    (o.manual ? '' : '<div style="text-align:center"><button class="linkish" id="skipBtn">Don\'t log this</button></div>'),
+    {dismiss:o.manual});
+
+  ov.querySelectorAll('.effort').forEach(b => b.onclick = () => {
+    effort = b.dataset.eff;
+    ov.querySelectorAll('.effort').forEach(z => z.setAttribute('aria-pressed', String(z === b)));
+  });
+  const keep = $('#keepBtn', ov);
+  if (keep) keep.onclick = () => { closeSheet(ov); runSegment(keepMin * 60); };
+  const skip = $('#skipBtn', ov);
+  if (skip) skip.onclick = () => { closeSheet(ov); session = null; };
+  $('#logBtn', ov).onclick = () => {
+    const note = $('#noteIn', ov).value.trim();
+    it.sessions.push({date:today(), effort, mins});
+    if (hasSubs){
+      ov.querySelectorAll('[data-sub]').forEach(c => {
+        if (c.checked){ const s = it.subsections.find(z => z.id === c.dataset.sub); if (s) s.done = true; }
+      });
+      recompute(it);
+    } else {
+      it.progress = Math.min(100, it.progress + EFFORTS.find(e => e.key === effort).bump);
+    }
+    if (note) it.nextStep = note; else if (o.usedNote) it.nextStep = '';
+    const d = today();
+    state.days[d] = state.days[d] || {count:0};
+    state.days[d].count++;
+    save(); closeSheet(ov); session = null;
+    nudge = null; render();
+    toast(MESSAGES[Math.floor(Math.random() * MESSAGES.length)]);
+  };
+}
+function recompute(it){
+  if (!it.subsections.length) return;
+  it.progress = Math.round(it.subsections.filter(s => s.done).length / it.subsections.length * 100);
+}
+
+/* ---------- piece sheet ---------- */
+function openItemSheet(id){
+  const x = findItem(id); if (!x) return;
+  const it = x.item;
+  const last = lastTouched(it);
+  const ov = openSheet(
+    '<div class="sheet-head"><h3 class="sheet-title">' + esc(it.title) + '</h3><button class="x-btn" data-close aria-label="Close">&times;</button></div>' +
+    '<p class="sheet-sub">' + esc(x.cat.name) + '. ' + (last ? 'Last worked on ' + agoText(daysAgo(last)) + '.' : 'Not started yet.') + '</p>' +
+    '<div id="itemBody"></div>');
+  const body = $('#itemBody', ov);
+
+  function paint(){
+    const hasSubs = it.subsections.length > 0;
+    body.innerHTML =
+      '<div class="label">First step for next time</div>' +
+      '<input class="input" id="nsIn" maxlength="140" placeholder="The smallest possible next move" value="' + esc(it.nextStep) + '">' +
+      '<div class="label">How much do you dread it?</div>' +
+      '<div class="seg" role="group" aria-label="Dread level">' +
+        [[1,'Easy'],[2,'Medium'],[3,'Dreaded']].map(d => '<button data-dread="' + d[0] + '" aria-pressed="' + (it.dread === d[0]) + '">' + d[1] + '</button>').join('') + '</div>' +
+      '<p class="hint" style="margin:8px 0 0">Low-energy days pull easy pieces. High-energy days pull the dreaded ones.</p>' +
+      (hasSubs
+        ? '<div class="label">Progress, set by your parts</div><div class="slider-row"><div class="sub-bar" style="flex:1"><i style="width:' + it.progress + '%"></i></div><span class="val">' + it.progress + '%</span></div>'
+        : '<div class="label">Progress</div><div class="slider-row"><input type="range" min="0" max="100" value="' + it.progress + '" id="prog" aria-label="Progress"><span class="val" id="progVal">' + it.progress + '%</span></div>') +
+      '<div class="label">Parts' + (hasSubs ? '' : ' (optional, they will set progress for you)') + '</div>' +
+      '<div class="checks">' + it.subsections.map(s =>
+        '<label class="check"><input type="checkbox" data-subdone="' + s.id + '"' + (s.done ? ' checked' : '') + '><span class="t' + (s.done ? ' done' : '') + '">' + esc(s.title) + '</span>' +
+        '<button class="mini x" data-subdel="' + s.id + '" aria-label="Remove part">&times;</button></label>').join('') + '</div>' +
+      '<div class="add-row"><input class="input" id="subIn" maxlength="100" placeholder="Add a part, e.g. 2.1 Methodology"><button class="btn quiet" id="subAdd" style="min-height:0;padding:0 16px">Add</button></div>' +
+      '<div class="row-end"><button class="btn" id="logHere">Log a session</button><button class="btn quiet" id="renameBtn" style="flex:none">Rename</button></div>' +
+      '<div style="text-align:center;margin-top:8px"><button class="linkish" id="removeBtn">Remove this piece</button></div>';
+    bind();
+  }
+  function bind(){
+    $('#nsIn', body).onchange = e => { it.nextStep = e.target.value.trim(); save(); renderNudge(); };
+    body.querySelectorAll('[data-dread]').forEach(b => b.onclick = () => {
+      it.dread = parseInt(b.dataset.dread, 10); save();
+      body.querySelectorAll('[data-dread]').forEach(z => z.setAttribute('aria-pressed', String(z === b)));
+    });
+    const prog = $('#prog', body);
+    if (prog){
+      prog.oninput = () => { $('#progVal', body).textContent = prog.value + '%'; };
+      prog.onchange = () => { it.progress = parseInt(prog.value, 10); save(); render(); };
+    }
+    body.querySelectorAll('[data-subdone]').forEach(c => c.onchange = () => {
+      const s = it.subsections.find(z => z.id === c.dataset.subdone); s.done = c.checked;
+      recompute(it); save(); render(); paint();
+    });
+    body.querySelectorAll('[data-subdel]').forEach(b => b.onclick = e => {
+      e.preventDefault();
+      it.subsections = it.subsections.filter(z => z.id !== b.dataset.subdel);
+      if (it.subsections.length) recompute(it);
+      save(); render(); paint();
+    });
+    const addSub = () => {
+      const inp = $('#subIn', body), v = inp.value.trim(); if (!v) return;
+      it.subsections.push({id:uid(), title:v, done:false});
+      recompute(it); save(); render(); paint();
+      $('#subIn', body).focus();
+    };
+    $('#subAdd', body).onclick = addSub;
+    $('#subIn', body).onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); addSub(); } };
+    $('#logHere', body).onclick = () => { closeSheet(ov); openDoneSheet({itemId:it.id, elapsed:0, subId:null, usedNote:false, manual:true}); };
+    $('#renameBtn', body).onclick = () => {
+      closeSheet(ov);
+      textSheet({title:'Rename this piece', label:'New name', value:it.title, cta:'Save name',
+        onSubmit:v => { it.title = v; save(); render(); }});
+    };
+    $('#removeBtn', body).onclick = () => {
+      closeSheet(ov);
+      confirmSheet({title:'Remove this piece?', body:'It comes off the shelf, and its logged sessions go with it.', cta:'Remove it',
+        onYes:() => { x.cat.items = x.cat.items.filter(z => z.id !== id); save(); nudge = null; render(); }});
+    };
+  }
+  paint();
+}
+
+/* ---------- actions ---------- */
+const actions = {
+  seed(){
+    state.categories = PRESETS.map(n => ({id:uid(), name:n, items:[]}));
+    save(); render();
+    toast('Tap the + on any shelf to add your first piece.');
+  },
+  pref(el){
+    const k = el.dataset.key, v = el.dataset.val;
+    state.prefs[k] = k === 'time' ? parseInt(v, 10) : v;
+    save();
+    if (k === 'energy') makeNudge(false); else if (nudge) nudge.shrink = 0;
+    renderNudge();
+  },
+  shrink(){ if (nudge){ nudge.shrink++; renderNudge(); } },
+  another(){ if (nudge){ makeNudge(true); renderNudge(); } },
+  start(){ if (nudge) startFocus(); },
+  'open-item'(el){ openItemSheet(el.dataset.id); },
+  'add-item'(el){
+    const cat = state.categories.find(c => c.id === el.dataset.id);
+    textSheet({title:'Add a piece', sub:'Shelf: ' + cat.name, label:'What is it called?', placeholder:'Chapter 3, Lit review paper', cta:'Add to shelf',
+      onSubmit:v => { cat.items.push({id:uid(), title:v, progress:0, dread:2, nextStep:'', subsections:[], sessions:[]}); save(); nudge = null; render(); }});
+  },
+  'add-cat'(){
+    textSheet({title:'Add a category', label:'Name it', placeholder:'Fieldwork, Presentations', cta:'Add category',
+      onSubmit:v => { state.categories.push({id:uid(), name:v, items:[]}); save(); render(); }});
+  },
+  'edit-cat'(el){
+    const cat = state.categories.find(c => c.id === el.dataset.id);
+    textSheet({title:'Edit category', label:'Name', value:cat.name, cta:'Save name',
+      extra:'<button class="btn quiet" id="rmCat" style="flex:none">Remove</button>',
+      bindExtra:ov => { $('#rmCat', ov).onclick = () => {
+        closeSheet(ov);
+        confirmSheet({title:'Remove "' + cat.name + '"?', body:cat.items.length ? 'The ' + cat.items.length + ' piece(s) on it go too.' : 'This shelf is empty.', cta:'Remove it',
+          onYes:() => { state.categories = state.categories.filter(c => c.id !== cat.id); save(); nudge = null; render(); }});
+      }; },
+      onSubmit:v => { cat.name = v; save(); render(); }});
+  },
+  'park-add'(){
+    const inp = $('#parkInput'), v = inp.value.trim(); if (!v) return;
+    state.ideas.unshift({id:uid(), text:v, date:today()}); save(); render();
+    const n = $('#parkInput'); if (n) n.focus();
+  },
+  'park-del'(el){ state.ideas = state.ideas.filter(i => i.id !== el.dataset.id); save(); render(); },
+  'park-shelf'(el){
+    const idea = state.ideas.find(i => i.id === el.dataset.id); if (!idea) return;
+    const ov = openSheet('<div class="sheet-head"><h3 class="sheet-title">Which shelf?</h3><button class="x-btn" data-close aria-label="Close">&times;</button></div>' +
+      '<p class="sheet-sub">' + esc(idea.text) + '</p><div style="margin-top:14px">' +
+      state.categories.map(c => '<button class="pick" data-cat="' + c.id + '"><span>' + esc(c.name) + '</span></button>').join('') + '</div>');
+    ov.querySelectorAll('.pick').forEach(b => b.onclick = () => {
+      const cat = state.categories.find(c => c.id === b.dataset.cat);
+      cat.items.push({id:uid(), title:idea.text.slice(0,60), progress:0, dread:2, nextStep:'', subsections:[], sessions:[]});
+      state.ideas = state.ideas.filter(i => i.id !== idea.id);
+      save(); closeSheet(ov); nudge = null; render(); toast('Added to ' + cat.name + '.');
+    });
+  },
+  'copy-backup'(){
+    const box = $('#backupBox'); box.value = JSON.stringify(state);
+    const fallback = () => { box.focus(); box.select(); toast('Select and copy the text above.'); };
+    try { navigator.clipboard.writeText(box.value).then(() => toast('Backup copied.'), fallback); } catch(e){ fallback(); }
+  },
+  restore(){
+    const box = $('#backupBox');
+    let parsed;
+    try { parsed = JSON.parse(box.value); } catch(e){ toast("That text isn't a valid backup."); return; }
+    if (!parsed || !Array.isArray(parsed.categories)){ toast("That text isn't a valid backup."); return; }
+    confirmSheet({title:'Replace your shelf?', body:'Everything currently here will be replaced by the backup.', cta:'Restore',
+      onYes:() => { state = normalize(parsed); save(); nudge = null; render(); toast('Backup restored.'); }});
+  }
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (el && actions[el.dataset.act]) actions[el.dataset.act](el, e);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target && e.target.id === 'parkInput'){ e.preventDefault(); actions['park-add'](); }
+});
+
+/* ---------- go ---------- */
+load();
+render();
+})();
+</script>
+</body>
+</html>
